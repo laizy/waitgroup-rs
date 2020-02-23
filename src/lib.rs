@@ -1,10 +1,14 @@
-// AtomicWaker is exposed in futures_utils, here use the internal one from futures_core to avoid
-// introducing a lot of dependencies.
-use futures_core::task::__internal::AtomicWaker;
+///! A WaitGroup waits for a collection of task to finish. 
+///! 
+
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
+
+// AtomicWaker is exposed in futures_utils, here use the internal one from futures_core to avoid
+// introducing a lot of dependencies.
+use futures_core::task::__internal::AtomicWaker;
 
 pub struct WaitGroup {
     inner: Weak<Inner>,
@@ -37,6 +41,10 @@ impl WaitGroup {
 
         (wg, done)
     }
+
+	pub fn done(&self) -> bool {
+		self.inner.strong_count() == 0
+	}
 }
 
 impl Future for WaitGroup {
