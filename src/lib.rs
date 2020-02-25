@@ -18,14 +18,12 @@
 //! }
 //! ```
 //!  
+use std::cell::UnsafeCell;
 use std::future::Future;
+use std::mem;
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
-use std::task::{Context, Poll};
-
-// AtomicWaker is exposed in futures_utils, here use the internal one from futures_core to avoid
-// introducing a lot of dependencies.
-use futures_core::task::__internal::AtomicWaker;
+use std::task::{Context, Poll, Waker};
 
 pub struct WaitGroup {
     inner: Arc<Inner>,
@@ -36,17 +34,24 @@ pub struct Worker {
     inner: Arc<Inner>,
 }
 
+// Safety: the Inner field can not be accessed, except dropping.
+unsafe impl Sync for Worker {}
+unsafe impl Send for Worker {}
+
 pub struct WaitGroupFuture {
     inner: Weak<Inner>,
 }
 
 struct Inner {
-    waker: AtomicWaker,
+    waker: UnsafeCell<Option<Waker>>,
 }
 
 impl Drop for Inner {
     fn drop(&mut self) {
-        self.waker.wake();
+        let cell = mem::replace(&mut self.waker, UnsafeCell::new(None));
+        if let Some(waker) = cell.into_inner() {
+            waker.wake();
+        }
     }
 }
 
@@ -54,7 +59,7 @@ impl WaitGroup {
     pub fn new() -> Self {
         Self {
             inner: Arc::new(Inner {
-                waker: AtomicWaker::new(),
+                waker: UnsafeCell::new(None),
             }),
         }
     }
@@ -90,7 +95,10 @@ impl Future for WaitGroupFuture {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.inner.upgrade() {
             Some(inner) => {
-                inner.waker.register(cx.waker());
+                // Safety: since we have a Arc instance now, so Inner::drop can not be called
+                // concurrently and this mutable access is unique.
+                let waker = unsafe { &mut *inner.waker.get() };
+                *waker = Some(cx.waker().clone());
                 Poll::Pending
             }
             None => return Poll::Ready(()),
