@@ -8,17 +8,16 @@ A WaitGroup waits for a collection of task to finish.
 use waitgroup::WaitGroup;
 use async_std::task;
 async {
-	let (wg, done) = WaitGroup::new();
+	let wg = WaitGroup::new();
 	for _ in 0..100 {
-		let d = done.clone();
+		let w = wg.worker();
 		task::spawn(async move {
 			// do work
-			drop(d); // drop d means task finished
+			drop(w); // drop d means task finished
 		};
 	}
-	drop(done);
 
-	wg.await;
+	wg.wait().await;
 }
 ```
 # License
