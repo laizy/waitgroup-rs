@@ -4,6 +4,8 @@
 //! ```rust
 //! use waitgroup::WaitGroup;
 //! use async_std::task;
+//! # fn main() {
+//! # task::block_on(
 //! async {
 //!     let wg = WaitGroup::new();
 //!     for _ in 0..100 {
@@ -11,11 +13,13 @@
 //!         task::spawn(async move {
 //!             // do work
 //!             drop(w); // drop d means task finished
-//!         };
+//!         });
 //!     }
 //!
 //!     wg.wait().await;
 //! }
+//! # );
+//! # }
 //! ```
 //!  
 use std::future::Future;
