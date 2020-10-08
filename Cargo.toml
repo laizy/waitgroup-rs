@@ -1,17 +1,19 @@
 [package]
 name = "waitgroup"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["laizy <aochyi@126.com>"]
 edition = "2018"
 license = "Apache-2.0"
 homepage = "https://github.com/laizy/waitgroup-rs"
 repository = "https://github.com/laizy/waitgroup-rs"
-description = "async waitgroup for a collection of task to finish"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Async waitgroup for a collection of task to finish"
+documentation = "https://docs.rs/waitgroup"
+keywords = ["waitgroup", "notify", "wake", "futures", "async"]
+categories = ["asynchronous", "concurrency"]
+readme = "README.md"
 
 [dependencies]
-futures-core = "0.3.4"
+atomic-waker = "1.0"
 
 [dev-dependencies]
 async-std = {version = "1.5.0", features = ["attributes"]}

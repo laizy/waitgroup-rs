@@ -4,7 +4,7 @@ A WaitGroup waits for a collection of task to finish.
 
 ## Examples
 
-```rust
+```rust 
 use waitgroup::WaitGroup;
 use async_std::task;
 async {
@@ -13,7 +13,7 @@ async {
 		let w = wg.worker();
 		task::spawn(async move {
 			// do work
-			drop(w); // drop d means task finished
+			drop(w); // drop w means task finished
 		};
 	}
 
