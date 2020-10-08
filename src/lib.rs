@@ -4,7 +4,6 @@
 //! ```rust
 //! use waitgroup::WaitGroup;
 //! use async_std::task;
-//! # fn main() {
 //! # task::block_on(
 //! async {
 //!     let wg = WaitGroup::new();
@@ -12,24 +11,21 @@
 //!         let w = wg.worker();
 //!         task::spawn(async move {
 //!             // do work
-//!             drop(w); // drop d means task finished
+//!             drop(w); // drop w means task finished
 //!         });
 //!     }
 //!
 //!     wg.wait().await;
 //! }
 //! # );
-//! # }
 //! ```
-//!  
+//!
+
+use atomic_waker::AtomicWaker;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
-
-// AtomicWaker is exposed in futures_utils, here use the internal one from futures_core to avoid
-// introducing a lot of dependencies.
-use futures_core::task::__internal::AtomicWaker;
 
 pub struct WaitGroup {
     inner: Arc<Inner>,
@@ -76,6 +72,12 @@ impl WaitGroup {
     }
 }
 
+impl Default for WaitGroup {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /*
 IntoFuture tracking issue: https://github.com/rust-lang/rust/issues/67644
 impl IntoFuture for WaitGroup {
@@ -97,7 +99,7 @@ impl Future for WaitGroupFuture {
                 inner.waker.register(cx.waker());
                 Poll::Pending
             }
-            None => return Poll::Ready(()),
+            None => Poll::Ready(()),
         }
     }
 }
