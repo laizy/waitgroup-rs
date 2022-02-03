@@ -8,10 +8,28 @@
 //! async {
 //!     let wg = WaitGroup::new();
 //!     for _ in 0..100 {
+//!         // 1. basic usage
 //!         let w = wg.worker();
 //!         task::spawn(async move {
-//!             // do work
-//!             drop(w); // drop w means task finished
+//!             // do work...
+//!             drop(w); // drop w means task finished, or just use `let _worker = w;`
+//!         });
+//!         // 2. waiting nested tasks using `Worker::clone`.
+//!         let w = wg.worker();
+//!         task::spawn(async move {
+//!             let worker = w;
+//!             // do work...
+//!             let sub_task = worker.clone();
+//!             task::spawn(async move {
+//!                 let _sub_task = sub_task;
+//!                 // do work...
+//!             });
+//!         });
+//!         // 3. waiting blocking tasks
+//!         let blocking_worker = wg.worker();
+//!         std::thread::spawn(move || {
+//!             let _blocking_worker = blocking_worker;
+//!             // do blocking work...
 //!         });
 //!     }
 //!
@@ -19,7 +37,6 @@
 //! }
 //! # );
 //! ```
-//!
 
 use atomic_waker::AtomicWaker;
 use std::future::Future;
@@ -32,12 +49,17 @@ pub struct WaitGroup {
 }
 
 #[derive(Clone)]
-pub struct Worker {
-    inner: Arc<Inner>,
-}
+pub struct Worker(Arc<Inner>);
 
 pub struct WaitGroupFuture {
     inner: Weak<Inner>,
+}
+
+impl WaitGroupFuture {
+    /// Gets the number of active workers.
+    pub fn workers(&self) -> usize {
+        Weak::strong_count(&self.inner)
+    }
 }
 
 struct Inner {
@@ -60,9 +82,12 @@ impl WaitGroup {
     }
 
     pub fn worker(&self) -> Worker {
-        Worker {
-            inner: self.inner.clone(),
-        }
+        Worker(self.inner.clone())
+    }
+
+    /// Gets the number of active workers.
+    pub fn workers(&self) -> usize {
+        Arc::strong_count(&self.inner) - 1
     }
 
     pub fn wait(self) -> WaitGroupFuture {
